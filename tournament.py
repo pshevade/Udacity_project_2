@@ -137,6 +137,29 @@ def swissPairings():
             "and a.player_id < b.player_id"
     rows = executeQuery(query)
     print("the match list is: {0}".format(rows))
+    '''
+    query = "SELECT tournament_name, player_name from tournaments, players, tournament_contestants where tournament_contestants.player_id = players.player_id and tournament_contestants.tournament_id = tournaments.tournament_id"
+    rows = executeQuery(query)
+    for row in rows:
+        print("The tournament name is: {0} and the player is: {1}".format(row[0], row[1]))
+    '''
+    tournaments_list =[]
+    players_list =[]
+    query = "SELECT tournament_id from tournaments order by tournament_id asc"
+    tournaments = executeQuery(query)
+    for tourney in tournaments:
+        query = "SELECT player_id from tournament_contestants where tournament_id = %s"
+        values = (tourney,)
+        players_in_tourney = executeQuery(query, values)
+        for count in range(0, len(players_in_tourney)-1):
+            query = "INSERT into swiss_pairs (tournament_id, player1_id, player2_id, round) values (%s, %s, %s, %s) RETURNING match_id"
+            values = (tourney, players_in_tourney[count], players_in_tourney[count+1], 0)
+            match_id_row = executeQuery(query, values)
+            query = "INSERT into match_list values (%s, %s, %s)"
+            values = (tourney, match_id_row[0][0], players_in_tourney[count])
+            executeQuery(query, values)
+            values = (tourney, match_id_row[0][0], players_in_tourney[count+1])
+            executeQuery(query, values)
 
 def main():
     tournament_id = registerTournament("Hand's tourney")

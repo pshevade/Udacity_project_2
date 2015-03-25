@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS tournament_contestants
 CREATE TABLE IF NOT EXISTS swiss_pairs
 (
     tournament_id       integer references tournaments ON DELETE CASCADE,
-    match_id            integer,
+    match_id            serial UNIQUE,
     player1_id          integer,
     player2_id          integer,
     round               integer,
