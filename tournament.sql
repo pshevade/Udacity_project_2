@@ -23,15 +23,15 @@ CREATE TABLE IF NOT EXISTS players
 
 CREATE TABLE IF NOT EXISTS tournament_contestants
 (
-    player_id           serial references players ON DELETE CASCADE,
     tournament_id       serial references tournaments ON DELETE CASCADE,
+    player_id           serial references players ON DELETE CASCADE,
     primary key (player_id, tournament_id)
 );
 
 CREATE TABLE IF NOT EXISTS swiss_pairs
 (
-    match_id            integer,
     tournament_id       integer references tournaments ON DELETE CASCADE,
+    match_id            integer,
     player1_id          integer,
     player2_id          integer,
     round               integer,
@@ -42,16 +42,16 @@ CREATE TABLE IF NOT EXISTS swiss_pairs
 
 CREATE TABLE IF NOT EXISTS match_list
 (
-    match_id               serial,
     tournament_id          serial,
+    match_id               serial,
     foreign key (match_id, tournament_id) references swiss_pairs ON DELETE CASCADE,
     player_id           serial references players ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS winners_list
 (
-    match_id               serial,
     tournament_id          serial,
+    match_id               serial,
     foreign key (match_id, tournament_id) references swiss_pairs ON DELETE CASCADE,
     winners_id          serial references players ON DELETE CASCADE
 );

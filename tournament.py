@@ -128,7 +128,7 @@ def registerContestants(player, tournament):
     print("Calling registerContestants - To the tournament id: {0} adding a player id: {1}".format(tournament, player))
     value = str(player) + ', ' + str(tournament)
     query = "INSERT INTO tournament_contestants values (%s, %s);"
-    values = (player, tournament, )
+    values = (tournament, player, )
     executeQuery(query, values)
 
 def swissPairings():
