@@ -11,7 +11,7 @@ def connect():
     return psycopg2.connect("dbname=swiss_style")
 
 
-def executeQuery(query, value1=None, value2=None):
+'''def executeQuery(query, value1=None, value2=None):
     rows = ['empty']
     DB_connection = connect()
     cur = DB_connection.cursor()
@@ -28,12 +28,29 @@ def executeQuery(query, value1=None, value2=None):
         print('No row to return')
     DB_connection.close()
     return rows
+'''
 
+def executeQuery(query, values=None):
+    rows = ['empty']
+    DB_connection = connect()
+    cur = DB_connection.cursor()
+    if values is not None:
+        cur.execute(query, values)
+    else:
+        cur.execute(query)
+    DB_connection.commit()
+    try:
+        rows = cur.fetchall()
+    except psycopg2.ProgrammingError:
+        print('No row to return')
+    DB_connection.close()
+    return rows
 
 def registerTournament(name):
     print("Calling registerTournament - registering a tournament named: {0}".format(name))
     query = "INSERT INTO tournaments (tournament_name) values (%s) RETURNING tournament_id;"
-    row = executeQuery(query, name)
+    values = (name,)
+    row = executeQuery(query, values)
     print(row)
     return row[0][0]
 
@@ -51,7 +68,8 @@ def deletePlayers():
 def deleteSpecificPlayer(player_id):
     print("Deleting player of id {0}".format(player_id))
     query = "DELETE FROM players where player_id = %s"
-    executeQuery(query, player_id)
+    values = (player_id, )
+    executeQuery(query, values)
 
 def countPlayers():
     print("Calling countPlayers")
@@ -70,8 +88,9 @@ def registerPlayer(name):
       name: the player's full name (need not be unique).
     """
     print("Calling registerPlayer - registering a player named: {0}".format(name))
-    query = "INSERT INTO players (player_name, player_points) values (%s, 0) RETURNING player_id;"
-    row = executeQuery(query, name)
+    query = "INSERT INTO players (player_name, player_points) values (%s, %s) RETURNING player_id;"
+    values = (name, str(0))
+    row = executeQuery(query, values)
     return row[0][0]
 
 def playerStandings():
@@ -99,7 +118,8 @@ def reportMatch(winner, loser):
 
 def getPlayerId(name):
     query = "select player_id from players where player_name = %s;"
-    rows = executeQuery(query, name)
+    values = (name, )
+    rows = executeQuery(query, values)
     if len(rows) > 0:
         return rows[0][0]
     else: return 'Not found'
@@ -107,44 +127,13 @@ def getPlayerId(name):
 def registerContestants(player, tournament):
     print("Calling registerContestants - To the tournament id: {0} adding a player id: {1}".format(tournament, player))
     value = str(player) + ', ' + str(tournament)
-    query = "INSERT INTO tournament_contestants values ({0}, {1});".format(player, tournament)
-    executeQuery(query)
+    query = "INSERT INTO tournament_contestants values (%s, %s);"
+    values = (player, tournament, )
+    executeQuery(query, values)
 
 def swissPairings():
-    """Returns a list of pairs of players for the next round of a match.
-
-    Assuming that there are an even number of players registered, each player
-    appears exactly once in the pairings.  Each player is paired with another
-    player with an equal or nearly-equal win record, that is, a player adjacent
-    to him or her in the standings.
-
-    Returns:
-      A list of tuples, each of which contains (id1, name1, id2, name2)
-        id1: the first player's unique id
-        name1: the first player's name
-        id2: the second player's unique id
-        name2: the second player's name
-    """
-    '''query = "SELECT tournament_id FROM tournaments"
-    t_id_rows = executeQuery(query)
-    print('This is what the tournament id rows look like: ')
-    print(t_id_rows)
-    query = "SELECT player_id FROM tournament_contestants WHERE tournament_id = %s"
-    for tournament_ids in t_id_rows:
-        p_id_rows = executeQuery(query, tournament_ids)
-        query = "SELECT count(*) FROM tournament_contestants WHERE tournament_id =%s"
-        count_players = executeQuery(query, tournament_ids)
-        print("this is the tournament_contestants table for tournament_id {0}: ".format(tournament_ids))
-        print(p_id_rows)
-        for id1 in range(0, count_players[0][0]):
-            for id2 in range(id1, count_players[0][0]):
-                query = "SELECT match_id from swiss_pairs WHERE player1_id = %s and player2_id = %s"
-                match_rows = executeQuery(query, id1, id2)
-                print("For players {0} and {1} we found that they played match {2}: ".format(id1, id2, match_rows))
-        #for player in p_id_rows:
-    '''
-    query = "SELECT a.player_id, b.player_id from match_list as a, match_list as b "
-            "where a.match_id = b.match_id and a.tournament_id = b.tournament_id "
+    query = "SELECT a.player_id, b.player_id from match_list as a, match_list as b " \
+            "where a.match_id = b.match_id and a.tournament_id = b.tournament_id " \
             "and a.player_id < b.player_id"
     rows = executeQuery(query)
     print("the match list is: {0}".format(rows))
