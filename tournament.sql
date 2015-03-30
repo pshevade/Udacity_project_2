@@ -57,3 +57,48 @@ CREATE TABLE IF NOT EXISTS winners_list
     winner_id          serial references players ON DELETE CASCADE
 );
 
+CREATE VIEW getWins AS
+SELECT  tournament_contestants.tournament_id, tournament_contestants.player_id,
+        count(swiss_pairs.match_id) AS wins
+        FROM tournament_contestants left join swiss_pairs
+        on tournament_contestants.player_id = swiss_pairs.winner_id
+        and tournament_contestants.tournament_id = swiss_pairs.tournament_id
+        group by tournament_contestants.tournament_id, tournament_contestants.player_id
+        order by tournament_contestants.tournament_id;
+
+CREATE VIEW getMatches AS
+SELECT  tournament_contestants.tournament_id, tournament_contestants.player_id,
+        count(match_list.match_id) as matches
+        from tournament_contestants, match_list
+        where tournament_contestants.player_id = match_list.player_id
+        and tournament_contestants.tournament_id = match_list.tournament_id
+        group by tournament_contestants.tournament_id, tournament_contestants.player_id
+        order by tournament_contestants.tournament_id;
+
+CREATE VIEW getMatchesAndWins AS
+SELECT  getMatches.tournament_id,
+        getMatches.player_id,
+        getMatches.matches,
+        getWins.wins
+        from getMatches, getWins
+        where getMatches.tournament_id = getWins.tournament_id
+        and getMatches.player_id = getWins.player_id;
+
+CREATE VIEW getPlayersInfo AS
+SELECT  tournament_contestants.tournament_id,
+        players.player_id,
+        players.player_name
+        from tournament_contestants, players
+        where tournament_contestants.player_id = players.player_id;
+
+
+CREATE VIEW getPlayerStandings AS
+SELECT  getPlayersInfo.tournament_id,
+        getPlayersInfo.player_id,
+        getPlayersInfo.player_name,
+        getMatchesAndWins.matches,
+        getMatchesAndWins.wins
+        from getPlayersInfo, getMatchesAndWins
+        where getPlayersInfo.tournament_id = getMatchesAndWins.tournament_id
+        and getPlayersInfo.player_id = getMatchesAndWins.player_id
+        order by tournament_id asc, wins desc;

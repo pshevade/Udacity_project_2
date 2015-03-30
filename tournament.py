@@ -6,6 +6,7 @@
 import psycopg2
 import random
 import math
+import pprint
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
@@ -112,39 +113,21 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    query = "SELECT " \
-            "tournament_contestants.tournament_id, " \
-            "players.player_id, " \
-            "players.player_name, " \
-            "matches.matches, wins.wins " \
-            "FROM tournament_contestants, " \
-            "players, " \
-            "(SELECT tournament_contestants.tournament_id, " \
-            "tournament_contestants.player_id, " \
-            "count(match_list.match_id) as matches " \
-            "FROM tournament_contestants, match_list " \
-            "WHERE tournament_contestants.player_id = match_list.player_id and " \
-            "tournament_contestants.tournament_id = match_list.tournament_id " \
-            "GROUP BY tournament_contestants.tournament_id, " \
-            "tournament_contestants.player_id " \
-            "ORDER BY tournament_contestants.tournament_id) as matches, " \
-            "(SELECT tournament_contestants.tournament_id, " \
-            "tournament_contestants.player_id, " \
-            "count(swiss_pairs.match_id) as wins " \
-            "FROM tournament_contestants left join swiss_pairs " \
-            "on tournament_contestants.player_id = swiss_pairs.winner_id and " \
-            "tournament_contestants.tournament_id = swiss_pairs.tournament_id " \
-            "GROUP BY tournament_contestants.tournament_id, " \
-            "tournament_contestants.player_id " \
-            "ORDER BY tournament_contestants.tournament_id) as wins " \
-            "WHERE players.player_id = matches.player_id and " \
-            "players.player_id = wins.player_id and " \
-            "tournament_contestants.tournament_id = matches.tournament_id and " \
-            "tournament_contestants.tournament_id = wins.tournament_id and " \
-            "tournament_contestants.player_id = players.player_id " \
-            "ORDER BY tournament_contestants.tournament_id asc, wins.wins desc;"
-    rows = executeQuery(query)
-    return rows;
+    query = "SELECT tournament_id, tournament_name from tournaments order by tournament_id asc"
+    tournaments = executeQuery(query)
+    standings = []
+    for tourney in tournaments:
+        print("For tournament: {0}".format(tourney[1]))
+        query = "SELECT * from getPlayerStandings where getPlayerStandings.tournament_id = %s"
+        values = (tourney[0],)
+        rows = executeQuery(query, values)
+        pp = pprint.PrettyPrinter(indent = 8, depth = 4)
+        for row in rows:
+            pp.pprint('{0} {1} {2} {3} {4}'.format(row[0], row[1], row[2], row[3], row[4]))
+        standings.append(rows)
+
+    return standings
+
 
 def reportMatch(winner, loser):
     """Records the outcome of a single match between two players.
@@ -242,8 +225,8 @@ def swissPairings():
                 executeQuery(query, values)
                 values = (player2_points, tourney, pair[1])
                 executeQuery(query, values)
-            print("After round # {0} the player standings are: ".format(rounds))
-            print(playerStandings())
+
+            playerStandings()
             rounds += 1
 
 
@@ -257,7 +240,7 @@ def getPlayerPairs(players):
     return player_pairs
 
 def main():
-
+    '''
     tournament_id = registerTournament("Hand's tourney")
     print("- Registered tournament, id given is: {0}".format(tournament_id))
 
@@ -273,20 +256,45 @@ def main():
     registerContestants(player_id, tournament_id)
     print("- Registered player, id given is: {0}".format(player_id))
 
-    player_id = registerPlayer("Ser Loras")
+    player_id = registerPlayer("Loras Tyrell")
     registerContestants(player_id, tournament_id)
     print("- Registered player, id given is: {0}".format(player_id))
 
-    player_id = registerPlayer("Ser Jaime")
+    player_id = registerPlayer("Jaime Lannister")
     registerContestants(player_id, tournament_id)
     print("- Registered player, id given is: {0}".format(player_id))
 
     player_id = registerPlayer("Oberyn Martell")
     registerContestants(player_id, tournament_id2)
 
-    print("total players are: {0}".format(countPlayers()))
+    player_id = registerPlayer("Tyrion Lannister")
+    registerContestants(player_id, tournament_id2)
 
+    player_id = registerPlayer("Bronn Sellsword")
+    registerContestants(player_id, tournament_id2)
+
+    player_id = registerPlayer("Baristan Selmy")
+    registerContestants(player_id, tournament_id)
+
+    player_id = registerPlayer("Meryn Trant")
+    registerContestants(player_id, tournament_id)
+
+    player_id = registerPlayer("Jorah Mormont")
+    registerContestants(player_id, tournament_id2)
+
+    player_id = registerPlayer("Davos Seaworth")
+    registerContestants(player_id, tournament_id2)
+
+
+
+
+
+
+
+    print("total players are: {0}".format(countPlayers()))
     swissPairings()
+    '''
+    playerStandings()
     #deleteMatches()
     #print('The student id for {0} is {1}'.format('Prasana Shevade', id1))
     #print('The student id for {0} is {1}'.format('Gauri Jog', id2))

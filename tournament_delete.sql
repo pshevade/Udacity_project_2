@@ -1,6 +1,16 @@
 -- tournament_delete
 -- to remove all tables from swiss_style database
 
+DROP VIEW getPlayerStandings;
+
+DROP VIEW getPlayersInfo;
+
+DROP VIEW getMatchesAndWins;
+
+DROP VIEW getWins;
+
+DROP VIEW getMatches;
+
 DROP TABLE winners_list;
 
 DROP TABLE match_list;
