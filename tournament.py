@@ -85,7 +85,7 @@ def countPlayers():
     row = executeQuery(query)
     return row[0][0]
 
-def registerPlayer(name):
+def registerPlayer(name, tournament=None):
     """Adds a player to the tournament database.
 
     The database assigns a unique serial id number for the player.  (This
@@ -93,12 +93,45 @@ def registerPlayer(name):
 
     Args:
       name: the player's full name (need not be unique).
+
+    Logic -
+            1. check if tournament exists, else create it.
+            1b. if no tournament doesn't exist, create it
+            1c. if no tournament parameter given and default doesn't exist, create it
+            2. register players
+            3. register player and tournament in tournament_contestants
     """
+    # 1. check if tournament exists:
+    query = "select tournament_id from tournaments where tournament_name = %s"
+    if tournament is not None:
+        values = (tournament, )
+        rows = executeQuery(query, values)
+        # 1.b if no tournament doesn't exit, create it
+        if len(rows) is not 0:
+            tournament_id = rows[0][0]
+        else:
+            print("No tournament exits, creating tournament {0}".format(tournament))
+            tournament_id = registerTournament(tournament)
+    elif tournament is None:
+        values = ('Default', )
+        rows = executeQuery(query, values)
+        # 1.c if no tournament parameter given and default doesn't exist, create it
+        if len(rows) is not 0:
+            tournament_id = rows[0][0]
+        else:
+            print("No tournament exits, creating a default one")
+            tournament_id = registerTournament('Default')
+
+    # 2. register player
     print("Calling registerPlayer - registering a player named: {0}".format(name))
     query = "INSERT INTO players (player_name) values (%s) RETURNING player_id;"
     values = (name, )
     row = executeQuery(query, values)
-    return row[0][0]
+    player_id = row[0][0]
+
+    # 3. register player and tournament in tournament_contestants
+    registerContestants(player_id, tournament_id)
+    return player_id
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
@@ -118,15 +151,16 @@ def playerStandings():
     standings = []
     for tourney in tournaments:
         print("For tournament: {0}".format(tourney[1]))
-        query = "SELECT * from getPlayerStandings where getPlayerStandings.tournament_id = %s"
+        query = "SELECT getPlayerStandings.player_id, getPlayerStandings.player_name, getPlayerStandings.matches, getPlayerStandings.wins from getPlayerStandings where getPlayerStandings.tournament_id = %s"
         values = (tourney[0],)
         rows = executeQuery(query, values)
         pp = pprint.PrettyPrinter(indent = 8, depth = 4)
         for row in rows:
-            pp.pprint('{0} {1} {2} {3} {4}'.format(row[0], row[1], row[2], row[3], row[4]))
+            pp.pprint('{0} {1} {2} {3}'.format(row[0], row[1], row[2], row[3]))
         standings.append(rows)
-
-    return standings
+    print standings;
+    print("The length of the standings list is: {0}".format(len(standings)))
+    return standings[0]
 
 
 def reportMatch(winner, loser):
@@ -228,6 +262,10 @@ def swissPairings():
 
             playerStandings()
             rounds += 1
+    query = "SELECT * from getSwissPairs"
+    rows = executeQuery(query)
+    print(rows)
+    return rows
 
 
 
@@ -239,8 +277,45 @@ def getPlayerPairs(players):
         player_pairs.append((players.pop(), players.pop()))
     return player_pairs
 
+def test(tournament):
+    # 1. check if tournament exists:
+    query = "select tournament_id from tournaments where tournament_name = %s"
+    if tournament is not None:
+        values = (tournament, )
+    elif tournament is None:
+        values = ('Default', )
+    rows = executeQuery(query, values)
+    if len(rows) is not 0:
+        tournament_id = rows
+        print('Here are the rows: {0}'.format(tournament_id))
+    else:
+        print("Empty row!")
+
 def main():
+
+    registerPlayer("The Mountain", "Hand's tourney")
+    registerPlayer("Brienne of Tarth", "Hand's tourney")
+    registerPlayer("Jorah Mormont", "Hand's tourney")
+    registerPlayer("Oberyn Martell", "Hand's tourney")
+    registerPlayer("Baristan Selmy", "Hand's tourney")
+    registerPlayer("Robert Baratheon", "Hand's tourney")
+    registerPlayer("Jaime Lanister", "Hand's tourney")
+    registerPlayer("The Hound", "Hand's tourney")
+
+    registerPlayer("Prasanna Shevade")
+    registerPlayer("Gauri Jog")
+    registerPlayer("Shrikant Shevade")
+    registerPlayer("Udayan Shevade")
+
+    print("Player's standings before tournament starts")
+    playerStandings()
+
+    swissPairings()
+
+    print("Player's standings after tournament ends")
+    playerStandings()
     '''
+
     tournament_id = registerTournament("Hand's tourney")
     print("- Registered tournament, id given is: {0}".format(tournament_id))
 
@@ -285,16 +360,14 @@ def main():
     player_id = registerPlayer("Davos Seaworth")
     registerContestants(player_id, tournament_id2)
 
-
-
-
-
-
-
     print("total players are: {0}".format(countPlayers()))
-    swissPairings()
-    '''
+    #swissPairings()
+
     playerStandings()
+    '''
+
+
+
     #deleteMatches()
     #print('The student id for {0} is {1}'.format('Prasana Shevade', id1))
     #print('The student id for {0} is {1}'.format('Gauri Jog', id2))

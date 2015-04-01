@@ -69,8 +69,8 @@ SELECT  tournament_contestants.tournament_id, tournament_contestants.player_id,
 CREATE VIEW getMatches AS
 SELECT  tournament_contestants.tournament_id, tournament_contestants.player_id,
         count(match_list.match_id) as matches
-        from tournament_contestants, match_list
-        where tournament_contestants.player_id = match_list.player_id
+        from tournament_contestants left join match_list
+        on tournament_contestants.player_id = match_list.player_id
         and tournament_contestants.tournament_id = match_list.tournament_id
         group by tournament_contestants.tournament_id, tournament_contestants.player_id
         order by tournament_contestants.tournament_id;
@@ -102,3 +102,16 @@ SELECT  getPlayersInfo.tournament_id,
         where getPlayersInfo.tournament_id = getMatchesAndWins.tournament_id
         and getPlayersInfo.player_id = getMatchesAndWins.player_id
         order by tournament_id asc, wins desc;
+
+CREATE VIEW getSwissPairs AS
+select one.player1_id, one.player_name as player1_name, two.player2_id, two.player_name as player2_name
+        from
+        (select swiss_pairs.match_id, swiss_pairs.player1_id, players.player_name
+                from swiss_pairs, players
+                where swiss_pairs.player1_id = players.player_id
+        ) as one,
+        (select swiss_pairs.match_id, swiss_pairs.player2_id, players.player_name
+                from swiss_pairs, players
+                where swiss_pairs.player2_id = players.player_id
+        ) as two
+        where one.match_id = two.match_id;
