@@ -62,8 +62,6 @@ def deleteMatches():
     executeQuery(query)
     query = "DELETE FROM match_list"
     executeQuery(query)
-    query = "DELETE FROM winners_list"
-    executeQuery(query)
 
 def deletePlayers():
     """Remove all the player records from the database."""
@@ -102,24 +100,19 @@ def registerPlayer(name, tournament=None):
             3. register player and tournament in tournament_contestants
     """
     # 1. check if tournament exists:
-    query = "select tournament_id from tournaments where tournament_name = %s"
     if tournament is not None:
-        values = (tournament, )
-        rows = executeQuery(query, values)
-        # 1.b if no tournament doesn't exit, create it
-        if len(rows) is not 0:
-            tournament_id = rows[0][0]
+        tournament_id = getTournamentID(tournament)
+        if tournament_id >0:
+            pass
         else:
-            print("No tournament exits, creating tournament {0}".format(tournament))
+            # 1b. if tournament doesn't exist, create it
             tournament_id = registerTournament(tournament)
     elif tournament is None:
-        values = ('Default', )
-        rows = executeQuery(query, values)
-        # 1.c if no tournament parameter given and default doesn't exist, create it
-        if len(rows) is not 0:
-            tournament_id = rows[0][0]
+        tournament_id = getTournamentID('Default')
+        if tournament_id >0:
+            pass
         else:
-            print("No tournament exits, creating a default one")
+            # 1b. if tournament doesn't exist, create it
             tournament_id = registerTournament('Default')
 
     # 2. register player
@@ -132,6 +125,18 @@ def registerPlayer(name, tournament=None):
     # 3. register player and tournament in tournament_contestants
     registerContestants(player_id, tournament_id)
     return player_id
+
+def getTournamentID(tournament):
+    query = "select tournament_id from tournaments where tournament_name = %s"
+    values = (tournament, )
+    rows = executeQuery(query, values)
+    # 1.b if no tournament doesn't exit, create it
+    if len(rows) is not 0:
+        tournament_id = rows[0][0]
+    else:
+        print("No tournament exits, may need to tournament {0}".format(tournament))
+        tournament_id = -1
+    return tournament_id
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
@@ -151,7 +156,7 @@ def playerStandings():
     standings = []
     for tourney in tournaments:
         print("For tournament: {0}".format(tourney[1]))
-        query = "SELECT getPlayerStandings.player_id, getPlayerStandings.player_name, getPlayerStandings.matches, getPlayerStandings.wins from getPlayerStandings where getPlayerStandings.tournament_id = %s"
+        query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
         values = (tourney[0],)
         rows = executeQuery(query, values)
         pp = pprint.PrettyPrinter(indent = 8, depth = 4)
@@ -160,16 +165,27 @@ def playerStandings():
         standings.append(rows)
     print standings;
     print("The length of the standings list is: {0}".format(len(standings)))
-    return standings[0]
+    if len(standings) > 1:
+        print("returning all standings")
+        return standings
+    else:
+        return standings[0]
 
 
-def reportMatch(winner, loser):
+def reportMatch(winner, loser, tournament=None):
     """Records the outcome of a single match between two players.
 
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    if tournament is not None:
+        tournament_id = getTournamentID(tournament)
+    else:
+        tournament_id = getTournamentID('Default')
+    query = "INSERT into match_list (tournament_id, winner_id, loser_id) values (%s, %s, %s)"
+    values = (tournament_id, winner, loser,)
+    rows = executeQuery(query, values)
 
 def getPlayerId(name):
     query = "select player_id from players where player_name = %s;"
