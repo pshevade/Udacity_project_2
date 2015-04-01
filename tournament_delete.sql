@@ -13,9 +13,9 @@ DROP VIEW getWins;
 
 DROP VIEW getMatches;
 
-DROP TABLE match_list;
-
 DROP TABLE swiss_pairs;
+
+DROP TABLE match_list;
 
 DROP TABLE tournament_contestants;
 

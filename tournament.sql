@@ -88,3 +88,5 @@ CREATE VIEW getMatchesAndWins AS
             and     tournament_contestants.player_id = getWins.player_id
             and     tournament_contestants.player_id = getMatches.player_id
             order by getWins.wins desc;
+
+

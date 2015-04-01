@@ -76,12 +76,21 @@ def deleteSpecificPlayer(player_id):
     values = (player_id, )
     executeQuery(query, values)
 
+
+
 def countPlayers():
     print("Calling countPlayers")
     """Returns the number of players currently registered."""
     query = "SELECT count(*) from players;"
     row = executeQuery(query)
     return row[0][0]
+
+def countPlayersInTournament(tournament):
+    tournament_id = getTournamentID('Default')
+    query = "SELECT count(*) from tournament_contestants where tournament_id = %s"
+    values = (tournament_id, )
+    rows = executeQuery(query, values)
+    return rows[0][0]
 
 def registerPlayer(name, tournament=None):
     """Adds a player to the tournament database.
@@ -202,95 +211,56 @@ def registerContestants(player, tournament):
     values = (tournament, player, )
     executeQuery(query, values)
 
-def swissPairings():
-    query = "SELECT a.player_id, b.player_id from match_list as a, match_list as b " \
-            "where a.match_id = b.match_id and a.tournament_id = b.tournament_id " \
-            "and a.player_id < b.player_id"
-    rows = executeQuery(query)
-    print("the match list is: {0}".format(rows))
-
-    ''' Logic:  1. get list of tournaments (select * from tournaments)
-                1b. get the number of players in tournament, to calculate the number of rounds to play
-                2. get list of players in that tournament (player_id from tournament_contestants table)
-                3. sort the list of players by points (player_points is in players table)
-                4. make pairs of players list (getPlayerPairs function)
-                5. determine winner (randomly select winner from pair?)
-                6. insert pairs into swiss_pairs table, return the match_id (swiss_pairs table)
-                7. insert match_id and player_ids for both players in match into match_list
-                8. Update the winner's points in tournament_contestants table
+def swissPairings(tournament=None):
+    ''' Logic:
+            1. get tournament_id
+            2. for tournament_id, check if each player has played the same number of matches
+            3. if each player has played the same number of matches, check if matches played = max
+                note:   total rounds = log(2) n         where n players
+                        total matches = log(2) n x n    where n players
+            4. generate swiss pairing by sorting players by standing
+            5. reassemble list based on OMW in case of tie
     '''
-    tournaments_list =[]
-    players_list =[]
 
-    # 1. get list of tournaments (select * from tournaments)
-    query = "SELECT tournament_id from tournaments order by tournament_id asc"
-    tournaments = executeQuery(query)
+    if tournament is not None:
+        count_players = countPlayersInTournament(tournament)
+        tournament_id = getTournamentID(tournament)
+    else:
+        count_players = countPlayersInTournament('Default')
+        tournament_id = getTournamentID('Default')
+    print("The players in this tournament are: {0}".format(count_players))
+    total_rounds = math.log(count_players, 2)
+    total_matches = total_rounds * count_players
+    player_pairs = []
+    print("THe Tournament id is: {0}".format(tournament_id))
+    query = "select getMatches.player_id, getMatches.matches from getMatches where getMatches.tournament_id = %s"
+    values = (tournament_id, )
+    rows = executeQuery(query, values)
+    print("Raw rows with player/match info from db: {0}".format(rows))
+    matches_played = [row[1] for row in rows]
+    print("matches played by all: {0}".format(matches_played))
 
-    for tourney in tournaments:
-        # 1b. get the number of players in tournament, to calculate the number of rounds to play
-        query = "SELECT count(*) from tournament_contestants where tournament_id = %s"
-        values = (tourney, )
-        count_players = executeQuery(query, values)
-        # there are log2(players) number of rounds
-        total_rounds = math.log(count_players[0][0], 2)
-        rounds = 1
-        while rounds <= total_rounds:
-            # 2. get list of players in that tournament (player_id from tournament_contestants table)
-            # 3. sort the list of players by points (player_points is in tournament_contestants)
-            query = "SELECT player_id from tournament_contestants where tournament_id = %s order by player_points desc"
-            values = (tourney,)
-            players_in_tourney = executeQuery(query, values)
-            # 4. make pairs of players list (getPlayerPairs function)
-            player_pairs = getPlayerPairs(players_in_tourney)
-            for pair in player_pairs:
-                # 5. determine winner (randomly select winner from pair?)
-                won_by = random.choice([1,2,3])
-                if won_by is 1:
-                    winner_id = pair[0]
-                    player1_points = 2
-                    player2_points = 0
-                elif won_by is 2:
-                    winner_id = pair[1]
-                    player1_points = 0
-                    player2_points = 2
-                elif won_by is 3:
-                    winner_id = -1
-                    player1_points = 1
-                    player2_points = 1
-
-                # 6. insert pairs into swiss_pairs table, return the match_id (swiss_pairs table)
-                query = "INSERT into swiss_pairs (tournament_id, player1_id, player2_id, round, winner_id) values (%s, %s, %s, %s, %s) RETURNING match_id"
-                values = (tourney, pair[0], pair[1], rounds, winner_id)
-                match_id_row = executeQuery(query, values)
-                match_id = match_id_row[0][0]
-                # 7. insert match_id and player_ids for both players in match into match_list
-                query = "INSERT into match_list values (%s, %s, %s)"
-                values = (tourney, match_id, pair[0])
-                executeQuery(query, values)
-                values = (tourney, match_id, pair[1])
-                executeQuery(query, values)
-                # 8. Update the winner's points in tournament_contestants table
-                query = "UPDATE tournament_contestants SET player_points = player_points + %s where tournament_id = %s and player_id = %s"
-                values = (player1_points, tourney, pair[0])
-                executeQuery(query, values)
-                values = (player2_points, tourney, pair[1])
-                executeQuery(query, values)
-
-            playerStandings()
-            rounds += 1
-    query = "SELECT * from getSwissPairs"
-    rows = executeQuery(query)
-    print(rows)
-    return rows
-
-
+    all_played_same_matches = all(x == matches_played[0] for x in matches_played)
+    if all_played_same_matches:
+        if matches_played[0] == total_matches:
+            print("We have played all the matches possible in this Swiss Style Tournament")
+        else:
+            query = "select getWins.player_id, players.player_name from getWins, players where players.player_id = getWins.player_id order by getWins.wins"
+            rows = executeQuery(query)
+            player_pairs = getPlayerPairs(rows)
+    else:
+        print("We have players who still haven't played in this round...")
+        for row in rows:
+            print("Player ID: {0} has played {1} matches".format(row[0], row[1]))
+    print ("The player pairs are: {0}".format(player_pairs))
+    return player_pairs
 
 def getPlayerPairs(players):
     ''' Returns a list of tuples '''
     players.reverse()
     player_pairs = []
     while len(players) > 0:
-        player_pairs.append((players.pop(), players.pop()))
+        player_pairs.append((players.pop() + players.pop()))
     return player_pairs
 
 def test(tournament):
