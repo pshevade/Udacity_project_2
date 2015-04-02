@@ -221,13 +221,14 @@ def swissPairings(tournament=None):
                 if odd players, then total players = n+1 where n is registered players (so one player can get a bye)
                 note:   total rounds = log(2) n         where n players
                         or           = log(2) (n+1)     where n players and n odd
-                        total matches = log(2) n x n    where n players
-                        or            = log(2) (n+1) x (n+1) where n players and n odd
+                        total matches = (log(2) n) x n/2    where n players
+                        or            = log(2) (n+1) x (n+1)/2 where n players and n odd
             4. if odd number of players, give a player a bye in that round
                 (making sure only one bye per player per tournament)
-
+            5. generate swiss pairing by sorting players by wins
     """
     # 1. get tournament_id and calculate total rounds and total matches possible
+    player_pairs = []
     if tournament is not None:
         count_players = countPlayersInTournament(tournament)
         tournament_id = getTournamentID(tournament)
@@ -236,54 +237,59 @@ def swissPairings(tournament=None):
         tournament_id = getTournamentID('Default')
     # check if count_players is odd, need to allocate a "space" for bye in that case
     print("We just measured players to be: {0}".format(count_players))
-    if count_players%2 != 0:
-        count_players += 1
+    if count_players<0:
+        print("We don't have any players!")
     else:
-        pass
+        # increase count_players if odd number to make "space" for bye
+        #if count_players%2 != 0:
+        #    count_players += 1
+        #else:
+        #    pass
 
-    total_rounds = round(math.log(count_players, 2))
-    total_matches = total_rounds * count_players
-    player_pairs = []
-    # 2. for tournament_id, check if each player has played the same number of matches
-    query = "select getMatches.player_id, getMatches.matches from getMatches where getMatches.tournament_id = %s"
-    values = (tournament_id, )
-    match_info_rows = executeQuery(query, values)
-    # Rows contains a list of tuples (player_id, matches played)
-    # We first separate the matches played of all players into a list
-    matches_played = [row[1] for row in match_info_rows]
-    # Then we check if all the elements (matches played of all players) is the same
-    all_played_same_matches = all(x == matches_played[0] for x in matches_played)
-    if all_played_same_matches:
-        # 3. if each player has played the same number of matches, check if matches played = max
-        if matches_played[0] == total_matches:
-            print("We have played all the matches possible in this Swiss Style Tournament")
+        total_rounds = round(math.log(count_players, 2))
+        total_matches = round(total_rounds * count_players/2)
+        print("Total Players: {0}, Rounds: {1}, matches {2}".format(count_players, total_rounds, total_matches))
+        # 2. for tournament_id, check if each player has played the same number of matches
+        query = "select getMatches.player_id, getMatches.matches from getMatches where getMatches.tournament_id = %s"
+        values = (tournament_id, )
+        match_info_rows = executeQuery(query, values)
+        # Rows contains a list of tuples (player_id, matches played)
+        # We first separate the matches played of all players into a list
+        matches_played = [row[1] for row in match_info_rows]
+        # Then we check if all the elements (matches played of all players) is the same
+        all_played_same_matches = all(x == matches_played[0] for x in matches_played)
+        if all_played_same_matches:
+            # 3. if each player has played the same number of matches, check if matches played = max
+            if matches_played[0] == total_matches:
+                print("We have played all the matches possible in this Swiss Style Tournament")
+            else:
+                # get players ordered by wins
+                query = "select getWins.player_id, players.player_name from getWins, players where players.player_id = getWins.player_id"
+                players_by_wins_rows = executeQuery(query)
+                # 4. if odd number of players, give a player a bye in that round
+                #    (making sure only one bye per player per tournament)
+                if len(players_by_wins_rows) %2 is not 0:
+                    for player_count in range(0, len(players_by_wins_rows)):
+                        query = "select * from bye_list where player_id = %s"
+                        values = (players_by_wins_rows[player_count][0], )
+                        bye_rows = executeQuery(query, values)
+                        if len(bye_rows) == 0:
+                            query = "insert into bye_list values (%s, %s)"
+                            values = (tournament_id, players_by_wins_rows[player_count][0])
+                            insert_bye_row = executeQuery(query, values)
+                            bye_player = players_by_wins_rows.pop(player_count)
+                            players_by_wins_rows.append(bye_player)
+                            players_by_wins_rows.append((None, 'bye'))
+                            break
+                print(players_by_wins_rows)
+                # 5. generate swiss pairing by sorting players by standing
+                player_pairs = getPlayerPairs(players_by_wins_rows)
         else:
-            # 4. if odd number of players, give a player a bye in that round
-            #    (making sure only one bye per player per tournament)
-            query = "select getWins.player_id, players.player_name from getWins, players where players.player_id = getWins.player_id"
-            players_by_wins_rows = executeQuery(query)
-
-            if len(players_by_wins_rows) %2 is not 0:
-                for player_count in range(0, len(players_by_wins_rows)):
-                    query = "select * from bye_list where player_id = %s"
-                    values = (players_by_wins_rows[player_count][0], )
-                    bye_rows = executeQuery(query, values)
-                    if len(bye_rows) == 0:
-                        query = "insert into bye_list values (%s, %s)"
-                        values = (tournament_id, players_by_wins_rows[player_count][0])
-                        insert_bye_row = executeQuery(query, values)
-                        bye_player = players_by_wins_rows.pop(player_count)
-                        players_by_wins_rows.append(bye_player)
-                        players_by_wins_rows.append((None, 'bye'))
-                        break
-            print(players_by_wins_rows)
-            # 5. generate swiss pairing by sorting players by standing
-            player_pairs = getPlayerPairs(players_by_wins_rows)
-    else:
-        print("We have players who still haven't played in this round...")
-        for row in rows:
-            print("Player ID: {0} has played {1} matches".format(row[0], row[1]))
+            print("We have players who still haven't played in this round...")
+            for row in rows:
+                print("Player ID: {0} has played {1} matches".format(row[0], row[1]))
     return player_pairs
+
 
 def getPlayerPairs(players):
     """ Returns a list of tuples """
