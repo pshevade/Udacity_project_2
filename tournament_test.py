@@ -125,15 +125,65 @@ def testPairings():
     print "8. After one match, players with one win are paired."
 
 
+def testBye():
+    deleteMatches()
+    deletePlayers()
+    # test for odd number of players
+    registerPlayer("Don Draper")
+    registerPlayer("Roger Sterling")
+    registerPlayer("Peggy Olson")
+    registerPlayer("Joan Holloway")
+    registerPlayer("Pete Campbell")
+    autoSwissPairing()
+
+def testCompleteSwissPairing():
+    deleteMatches()
+    deletePlayers()
+    registerPlayer("Don Draper")
+    registerPlayer("Roger Sterling")
+    registerPlayer("Peggy Olson")
+    registerPlayer("Joan Holloway")
+    autoSwissPairing()
+
+def autoSwissPairing():
+    pairings = [1]  #default so we can have atleast one round
+    swiss_round = 1
+    while len(pairings) > 0:
+        print("Round: {0}".format(swiss_round))
+        print("Standings: ")
+        playerStandings()
+        pairings = swissPairings()
+        print(pairings)
+        for pair in pairings:
+            if pair[0] is None:
+                winner_id = pair[2]
+                loser_id = -1
+                print("Bye for player: {0}".format(pair[3]))
+            elif pair[2] is None:
+                winner_id = pair[0]
+                loser_id = -1
+                print("Bye for player: {0}".format(pair[1]))
+            else:
+                winner_id = pair[0]
+                loser_id = pair[2]
+                print("Winner of {0} and {1} is: {2}".format(pair[1], pair[3], pair[1]))
+            reportMatch(winner_id, loser_id)
+        swiss_round += 1
+
+
 if __name__ == '__main__':
-    testDeleteMatches()
-    testDelete()
-    testCount()
-    testRegister()
-    testRegisterCountDelete()
-    testStandingsBeforeMatches()
-    testReportMatches()
-    testPairings()
+    #testDeleteMatches()
+    #testDelete()
+    #testCount()
+    #testRegister()
+    #testRegisterCountDelete()
+    #testStandingsBeforeMatches()
+    #testReportMatches()
+    #testPairings()
+
+    #Extra credit - assuming any number of players (odd or even)
+    testCompleteSwissPairing()
+    testBye()
     print "Success!  All tests pass!"
 
 

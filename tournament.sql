@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS swiss_pairs
     foreign key         (player2_id, tournament_id) references tournament_contestants ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS bye_list
+(
+    tournament_id       integer references tournaments ON DELETE CASCADE,
+    player_id           integer
+);
 
 
 CREATE VIEW getWins AS
@@ -60,7 +65,8 @@ CREATE VIEW getWins AS
             and tournament_contestants.tournament_id = match_list.tournament_id
             group by tournament_contestants.tournament_id,
             tournament_contestants.player_id
-            order by  wins desc;
+            order by  wins desc, tournament_contestants.tournament_id asc,
+            tournament_contestants.player_id asc;
 
 CREATE VIEW getMatches AS
     SELECT  tournament_contestants.tournament_id,
@@ -87,6 +93,7 @@ CREATE VIEW getMatchesAndWins AS
             and     tournament_contestants.player_id = players.player_id
             and     tournament_contestants.player_id = getWins.player_id
             and     tournament_contestants.player_id = getMatches.player_id
-            order by getWins.wins desc;
+            order by getWins.wins desc, tournament_contestants.tournament_id asc,
+            players.player_id asc;
 
 
