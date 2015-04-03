@@ -169,6 +169,7 @@ def playerStandings(tournament="Default"):
     """
     tournament_id = getTournamentID(tournament)
     standings = []
+    #query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
     query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
     values = (tournament_id,)
     rows = executeQuery(query, values)
@@ -179,7 +180,7 @@ def playerStandings(tournament="Default"):
     return standings
 
 
-def reportMatch(winner, loser, tournament="Default"):
+def reportMatch(winner, loser, tied=0, tournament="Default"):
     """Records the outcome of a single match between two players.
 
     Args:
@@ -187,9 +188,20 @@ def reportMatch(winner, loser, tournament="Default"):
       loser:  the id number of the player who lost
     """
     tournament_id = getTournamentID(tournament)
-    query = "INSERT into match_list (tournament_id, winner_id, loser_id) values (%s, %s, %s)"
-    values = (tournament_id, winner, loser,)
-    rows = executeQuery(query, values)
+    if tied == 0:
+        values_report_match = (tournament_id, winner, loser, winner, tied)
+        query2 = "UPDATE tournament_contestants set player_points = player_points + 2 where player_id = %s"
+        values2 = (winner,)
+        executeQuery(query2, values2)
+    else:
+        values_report_match = (tournament_id, winner, loser, -1, tied)
+        query2 = "UPDATE tournament_contestants set player_points = player_points + 1 where player_id = %s"
+        values2 = (winner,)
+        executeQuery(query2, values2)
+        values2 = (loser,)
+        executeQuery(query2, values2)
+    query_report_match = "INSERT into match_list (tournament_id, player1_id, player2_id, winner_id, tied) values (%s, %s, %s, %s, %s)"
+    rows = executeQuery(query_report_match, values_report_match)
 
 
 def getPlayerId(name):
@@ -206,7 +218,6 @@ def registerContestants(player, tournament):
     """ Registers the contestants per tournament
         Done for the case when multiple tournaments exist
     """
-    value = str(player) + ', ' + str(tournament)
     query = "INSERT INTO tournament_contestants values (%s, %s);"
     values = (tournament, player, )
     executeQuery(query, values)

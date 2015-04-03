@@ -91,6 +91,7 @@ def testReportMatches():
     reportMatch(id1, id2)
     reportMatch(id3, id4)
     standings = playerStandings()
+    print("The standings are: {0}".format(standings))
     for (i, n, w, m) in standings:
         if m != 1:
             raise ValueError("Each player should have one match recorded.")
@@ -210,6 +211,24 @@ def testBye():
     print "11. After one entire tournament with odd players, correct player standings."
 
 
+def testTiedMatch():
+    deleteMatches()
+    deletePlayers()
+    id1 = registerPlayer("Robert Plant")
+    id2 = registerPlayer("Jimmy Page")
+    id3 = registerPlayer("John Paul Jones")
+    id4 = registerPlayer("John Bonham")
+    reportMatch(id1, id2, 1)
+    reportMatch(id3, id4)
+    standings = playerStandings()
+    expected_standings = [id3, id1, id2, id4]
+    actual_standings = [standings[0][0], standings[1][0], standings[2][0], standings[3][0]]
+    if actual_standings!=expected_standings:
+        raise ValueError(
+            "Tied games should count for more than lost games, but less than won games.")
+    print "12. With one tied game, the standings are correct."
+
+
 if __name__ == '__main__':
     testDeleteMatches()
     testDelete()
@@ -224,6 +243,7 @@ if __name__ == '__main__':
     testMultipleTournaments()
     testCompleteSwissPairing()
     testBye()
+    testTiedMatch()
     print "Success!  All tests pass!"
 
 
