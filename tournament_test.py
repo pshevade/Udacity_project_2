@@ -125,16 +125,25 @@ def testPairings():
     print "8. After one match, players with one win are paired."
 
 
-def testBye():
+def testMultipleTournaments():
+    deleteTournaments()
     deleteMatches()
     deletePlayers()
-    # test for odd number of players
-    registerPlayer("Don Draper")
-    registerPlayer("Roger Sterling")
-    registerPlayer("Peggy Olson")
-    registerPlayer("Joan Holloway")
-    registerPlayer("Pete Campbell")
-    autoSwissPairing()
+    tid1 = registerTournament("Wimbledon")
+    pid1 = registerPlayer("Pete Sampras", "Wimbledon")
+    pid2 = registerPlayer("Andre Agassi", "Wimbledon")
+    tid2 = registerTournament("US Open")
+    registerContestants(pid1, tid2)
+    registerContestants(pid2, tid2)
+    pid3 = registerPlayer("Roger Federer", "Wimbledon")
+    count_in_tour1 = countPlayersInTournament("Wimbledon")
+    count_in_tour2 = countPlayersInTournament("US Open")
+    if count_in_tour1 != 3 and count_in_tour2 != 2:
+        raise ValueError(
+            "First tournament should have 3 players, second tournament 2 players.")
+    print "9. Correct number of players in both tournaments"
+
+
 
 def testCompleteSwissPairing():
     deleteMatches()
@@ -144,6 +153,15 @@ def testCompleteSwissPairing():
     registerPlayer("Peggy Olson")
     registerPlayer("Joan Holloway")
     autoSwissPairing()
+    standings = playerStandings()
+    [name1, name2, name3, name4] = [row[1] for row in standings]
+    expected_names_order = ["Don Draper", "Roger Sterling", "Peggy Olson", "Joan Holloway"]
+    actual_names_order = [name1, name2, name3, name4]
+    if expected_names_order != actual_names_order:
+        raise ValueError(
+            "After one entire tournament's swiss pairing with even players, player standings order is incorrect.")
+    print "10. After one entire tournament's swiss pairing with even players, correct player standings."
+
 
 def autoSwissPairing():
     pairings = [1]  #default so we can have atleast one round
@@ -169,19 +187,41 @@ def autoSwissPairing():
                 print("Winner of {0} and {1} is: {2}".format(pair[1], pair[3], pair[1]))
             reportMatch(winner_id, loser_id)
         swiss_round += 1
+    return pairings
+
+
+def testBye():
+    deleteMatches()
+    deletePlayers()
+    # test for odd number of players
+    registerPlayer("Don Draper")
+    registerPlayer("Roger Sterling")
+    registerPlayer("Peggy Olson")
+    registerPlayer("Joan Holloway")
+    registerPlayer("Pete Campbell")
+    pairings = autoSwissPairing()
+    standings = playerStandings()
+    [name1, name2, name3, name4, name5] = [row[1] for row in standings]
+    expected_names_order = ["Don Draper", "Joan Holloway", "Peggy Olson", "Roger Sterling", "Pete Campbell"]
+    actual_names_order = [name1, name2, name3, name4, name5]
+    if expected_names_order != actual_names_order:
+        raise ValueError(
+            "After one entire tournament with odd players, player standings order is incorrect.")
+    print "11. After one entire tournament with odd players, correct player standings."
 
 
 if __name__ == '__main__':
-    #testDeleteMatches()
-    #testDelete()
-    #testCount()
-    #testRegister()
-    #testRegisterCountDelete()
-    #testStandingsBeforeMatches()
-    #testReportMatches()
-    #testPairings()
+    testDeleteMatches()
+    testDelete()
+    testCount()
+    testRegister()
+    testRegisterCountDelete()
+    testStandingsBeforeMatches()
+    testReportMatches()
+    testPairings()
 
     #Extra credit - assuming any number of players (odd or even)
+    testMultipleTournaments()
     testCompleteSwissPairing()
     testBye()
     print "Success!  All tests pass!"

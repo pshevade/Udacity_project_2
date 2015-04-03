@@ -53,6 +53,12 @@ def deleteMatches():
     executeQuery(query)
 
 
+def deleteTournaments():
+    """Remove all tournaments from database """
+    query = "DELETE FROM tournaments"
+    executeQuery(query)
+
+
 def deletePlayers():
     """Remove all the player records from the database."""
     sub_query = "SELECT player_id from players"
@@ -79,7 +85,7 @@ def countPlayers():
 
 def countPlayersInTournament(tournament):
     """Count all players in a given tournament"""
-    tournament_id = getTournamentID('Default')
+    tournament_id = getTournamentID(tournament)
     query = "SELECT count(*) from tournament_contestants where tournament_id = %s"
     values = (tournament_id, )
     rows = executeQuery(query, values)
@@ -139,7 +145,7 @@ def getTournamentID(tournament):
     if len(rows) is not 0:
         tournament_id = rows[0][0]
     else:
-        print("No tournament exits, may need to tournament {0}".format(tournament))
+        print("No tournament exits, may need to create tournament {0}".format(tournament))
         tournament_id = -1
     return tournament_id
 
