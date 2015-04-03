@@ -229,21 +229,37 @@ def testTiedMatch():
     print "12. With one tied game, the standings are correct."
 
 
+def testOMW():
+    deleteMatches()
+    deletePlayers()
+    id1 = registerPlayer("Robert Plant")
+    id2 = registerPlayer("Jimmy Page")
+    id3 = registerPlayer("John Paul Jones")
+    id4 = registerPlayer("John Bonham")
+    reportMatch(id1, id2, 1)
+    reportMatch(id3, id4)
+    reportMatch(id1, id3)
+    reportMatch(id3, id2)
+    resolveOMW(id1, id2)
+    playerStandings()
+
+
 if __name__ == '__main__':
-    testDeleteMatches()
-    testDelete()
-    testCount()
-    testRegister()
-    testRegisterCountDelete()
-    testStandingsBeforeMatches()
-    testReportMatches()
-    testPairings()
+    #testDeleteMatches()
+    #testDelete()
+    #testCount()
+    #testRegister()
+    #testRegisterCountDelete()
+    #testStandingsBeforeMatches()
+    #testReportMatches()
+    #testPairings()
 
     #Extra credit - assuming any number of players (odd or even)
-    testMultipleTournaments()
-    testCompleteSwissPairing()
-    testBye()
-    testTiedMatch()
+    #testMultipleTournaments()
+    #testCompleteSwissPairing()
+    #testBye()
+    #testTiedMatch()
+    testOMW()
     print "Success!  All tests pass!"
 
 

@@ -272,8 +272,9 @@ def swissPairings(tournament="Default"):
                 print("We have played all the matches possible in this Swiss Style Tournament")
             else:
                 # get players ordered by wins
-                query = "select getWins.player_id, players.player_name from getWins, players where players.player_id = getWins.player_id"
+                query = "select getWins.player_id, players.player_name, getWins.wins from getWins, players where players.player_id = getWins.player_id"
                 players_by_wins_rows = executeQuery(query)
+
                 # 4. if odd number of players, give a player a bye in that round
                 #    (making sure only one bye per player per tournament)
                 if len(players_by_wins_rows) %2 is not 0:
@@ -308,3 +309,77 @@ def getPlayerPairs(players):
         player_pairs.append((players.pop() + players.pop()))
     return player_pairs
 
+
+def resolveOMW(player1, player2, tournament="Default"):
+    """ Logic:
+            1. get all players player1 has played with
+            2. get all players player2 has played with
+            3. get list of common players
+            4. for player1, calculate all the players from common list they have won against
+            5. for player2, calculate all the players from common list they have won against
+            6. return players based on who won against most common opponents
+    """
+    tournament_id = getTournamentID(tournament)
+    query = "SELECT player2_id from match_list where player1_id = %s and tournament_id = %s"
+    values = (player1, tournament_id, )
+    rows = executeQuery(query, values)
+    print("returned rows: {0}".format(rows))
+    players_p1_played_with = [row[0] for row in rows]
+
+    query = "SELECT player1_id from match_list where player2_id = %s and tournament_id = %s"
+    values = (player1, tournament_id, )
+    rows = executeQuery(query, values)
+    print("returned rows: {0}".format(rows))
+    players_p1_played_with+= [row[0] for row in rows]
+
+    query = "SELECT player2_id from match_list where player1_id = %s and tournament_id = %s"
+    values = (player2, tournament_id, )
+    rows = executeQuery(query, values)
+    print("returned rows: {0}".format(rows))
+    players_p2_played_with = [row[0] for row in rows]
+
+    query = "SELECT player1_id from match_list where player2_id = %s and tournament_id = %s"
+    values = (player2, tournament_id, )
+    rows = executeQuery(query, values)
+    print("returned rows: {0}".format(rows))
+    players_p2_played_with+=[row[0] for row in rows]
+
+    print("List of player ids player 1 played with: {0}".format(players_p1_played_with))
+    print("List of player ids player 2 played with: {0}".format(players_p2_played_with))
+    common_players_list = list(frozenset(players_p1_played_with).intersection(players_p2_played_with))
+    print("List of common players: {0}".format(common_players_list))
+    common_players_list.append(player1)
+    common_players_list.append(player2)
+    player1_vs_common_matches = []
+    player2_vs_common_matches = []
+    for common_player in common_players_list:
+        query = "SELECT winner_id from match_list where player1_id = %s and player2_id = %s or player2_id = %s and player1_id = %s"
+        values = (player1, common_player, player1, common_player,)
+        rows = executeQuery(query, values)
+        player1_vs_common_matches += [row[0] for row in rows]
+        values = (player2, common_player, player2, common_player,)
+        rows = executeQuery(query, values)
+        player2_vs_common_matches += [row[0] for row in rows]
+
+    print("Player 1 and common matches winners are: {0}".format(player1_vs_common_matches))
+    print("Player 2 and common matches winners are: {0}".format(player2_vs_common_matches))
+    matches_p1_won_against_common = player1_vs_common_matches.count(player1)
+    matches_p2_won_against_common = player2_vs_common_matches.count(player2)
+    print("Matches p1 won against common: {0}".format(matches_p1_won_against_common))
+    print("Matches p2 won against common: {0}".format(matches_p2_won_against_common))
+
+    if matches_p1_won_against_common > matches_p2_won_against_common:
+        return (player1, player2)
+    elif matches_p1_won_against_common < matches_p2_won_against_common:
+        return (player2, player1)
+    '''elif matches_p1_won_against_common == matches_p2_won_against_common:
+        query = "SELECT winner_id from match_list where player1_id = %s and player2_id = %s or player2_id = %s and player1_id = %s"
+        values = (player1, player2, player1, player2,)
+        rows = executeQuery(query, values)
+        if len(row) == 0:
+            print("Players have won the same number of matches against opponents, and haven't played each other yet")
+        else:
+            if rows[0][0] == player1:
+                return (player1, player2)
+            elif rows[0][0]
+    '''
