@@ -92,7 +92,7 @@ def countPlayersInTournament(tournament):
     return rows[0][0]
 
 
-def registerPlayer(name, tournament=None):
+def registerPlayer(name, tournament="Default"):
     """Adds a player to the tournament database.
 
     The database assigns a unique serial id number for the player.  (This
@@ -109,7 +109,10 @@ def registerPlayer(name, tournament=None):
             3. register player and tournament in tournament_contestants
     """
     # 1. check if tournament exists:
-    if tournament is not None:
+    tournament_id = getTournamentID(tournament)
+    if tournament_id == -1:
+        tournament_id = registerTournament(tournament)
+    '''if tournament is not None:
         tournament_id = getTournamentID(tournament)
         if tournament_id >0:
             pass
@@ -123,6 +126,7 @@ def registerPlayer(name, tournament=None):
         else:
             # 1b. if tournament doesn't exist, create it
             tournament_id = registerTournament('Default')
+    '''
     # 2. register player
     query = "INSERT INTO players (player_name) values (%s) RETURNING player_id;"
     values = (name, )
@@ -150,7 +154,7 @@ def getTournamentID(tournament):
     return tournament_id
 
 
-def playerStandings():
+def playerStandings(tournament="Default"):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
@@ -163,35 +167,26 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    query = "SELECT tournament_id, tournament_name from tournaments order by tournament_id asc"
-    tournaments = executeQuery(query)
+    tournament_id = getTournamentID(tournament)
     standings = []
-    for tourney in tournaments:
-        query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
-        values = (tourney[0],)
-        rows = executeQuery(query, values)
-        for row in rows:
-            print('{0} {1} {2} {3}'.format(row[0], row[1], row[2], row[3]))
-        standings.append(rows)
-    if len(standings) > 1:
-        # This is done for multiple tournaments
-        return standings
-    else:
-        # In case of just one tournament, only one list is passed
-        return standings[0]
+    query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
+    values = (tournament_id,)
+    rows = executeQuery(query, values)
+    for row in rows:
+        print('{0} {1} {2} {3}'.format(row[0], row[1], row[2], row[3]))
+        standings.append(row)
+
+    return standings
 
 
-def reportMatch(winner, loser, tournament=None):
+def reportMatch(winner, loser, tournament="Default"):
     """Records the outcome of a single match between two players.
 
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    if tournament is not None:
-        tournament_id = getTournamentID(tournament)
-    else:
-        tournament_id = getTournamentID('Default')
+    tournament_id = getTournamentID(tournament)
     query = "INSERT into match_list (tournament_id, winner_id, loser_id) values (%s, %s, %s)"
     values = (tournament_id, winner, loser,)
     rows = executeQuery(query, values)
@@ -217,7 +212,7 @@ def registerContestants(player, tournament):
     executeQuery(query, values)
 
 
-def swissPairings(tournament=None):
+def swissPairings(tournament="Default"):
     """ Generate the swiss pairings for a given tournament. if tournament is not
         given, then creates swiss pairs out of the default tournament playerStandings
         Logic:
@@ -235,12 +230,8 @@ def swissPairings(tournament=None):
     """
     # 1. get tournament_id and calculate total rounds and total matches possible
     player_pairs = []
-    if tournament is not None:
-        count_players = countPlayersInTournament(tournament)
-        tournament_id = getTournamentID(tournament)
-    else:
-        count_players = countPlayersInTournament('Default')
-        tournament_id = getTournamentID('Default')
+    count_players = countPlayersInTournament(tournament)
+    tournament_id = getTournamentID(tournament)
     # check if count_players is odd, need to allocate a "space" for bye in that case
     print("We just measured players to be: {0}".format(count_players))
     if count_players<0:
