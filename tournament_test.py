@@ -126,6 +126,44 @@ def testPairings():
     print "8. After one match, players with one win are paired."
 
 
+def testBye():
+    deleteMatches()
+    deletePlayers()
+    # test for odd number of players
+    registerPlayer("Don Draper")
+    registerPlayer("Roger Sterling")
+    registerPlayer("Peggy Olson")
+    registerPlayer("Joan Holloway")
+    registerPlayer("Pete Campbell")
+    pairings = autoSwissPairing()
+    standings = playerStandings()
+    [name1, name2, name3, name4, name5] = [row[1] for row in standings]
+    expected_names_order = ["Don Draper", "Joan Holloway", "Peggy Olson", "Roger Sterling", "Pete Campbell"]
+    actual_names_order = [name1, name2, name3, name4, name5]
+    if expected_names_order != actual_names_order:
+        raise ValueError(
+            "After one entire tournament with odd players, player standings order is incorrect.")
+    print "9. After one entire tournament with odd players, correct player standings."
+
+
+def testTiedMatch():
+    deleteMatches()
+    deletePlayers()
+    id1 = registerPlayer("Robert Plant")
+    id2 = registerPlayer("Jimmy Page")
+    id3 = registerPlayer("John Paul Jones")
+    id4 = registerPlayer("John Bonham")
+    reportMatch(id1, id2, 1)
+    reportMatch(id3, id4)
+    standings = playerStandings()
+    expected_standings = [id3, id1, id2, id4]
+    actual_standings = [standings[0][0], standings[1][0], standings[2][0], standings[3][0]]
+    if actual_standings!=expected_standings:
+        raise ValueError(
+            "Tied games should count for more than lost games, but less than won games.")
+    print "10. With one tied game, the standings are correct."
+
+
 def testMultipleTournaments():
     deleteTournaments()
     deleteMatches()
@@ -142,11 +180,48 @@ def testMultipleTournaments():
     if count_in_tour1 != 3 and count_in_tour2 != 2:
         raise ValueError(
             "First tournament should have 3 players, second tournament 2 players.")
-    print "9. Correct number of players in both tournaments"
+    print "11. Correct number of players in both tournaments"
 
+
+def testOMW():
+    deleteMatches()
+    deletePlayers()
+    id1 = registerPlayer("Robert Plant")
+    id2 = registerPlayer("Jimmy Page")
+    id3 = registerPlayer("John Paul Jones")
+    id4 = registerPlayer("John Bonham")
+    id5 = registerPlayer("Jimmi Hendrix")
+    # Player 1 beats Player 2
+    reportMatch(id1, id2)
+    # Player 5 beats Player 1
+    reportMatch(id5, id1)
+    # Player 3 beats Player 5
+    reportMatch(id3, id5)
+    # Player 3 beats Player 4
+    reportMatch(id3, id4)
+    # Player 1 beats player 2
+    reportMatch(id1, id2)
+
+    # Player 1 and player 3 have both won the same number of matches - 2 each
+    # but Player 3 has defeated Player 5 while Player 1 lost to Player 5.
+    # Based on this, the OMW should state that Player 3 ranks higher than Player 1
+
+    standings = playerStandings()
+    expected_standings = [id3, id1, id5, id2, id4]
+    actual_standings = [standings[0][0], standings[1][0], standings[2][0], standings[3][0], standings[4][0]]
+    print("Actual Standings: {0}".format(actual_standings))
+    if actual_standings!=expected_standings:
+        raise ValueError(
+            "Players are not ranked in correct order as per OMW.")
+    print "12. OMW resolved correctly, the players are ranked as per OMW when tied for wins."
 
 
 def testCompleteSwissPairing():
+    """ For a given number of players and tournament, run the complete swiss_pairing.
+        autoSwissPairing - this function will automatically register a winner and
+                            give the swiss_pair for the next round, until there are
+                            no more rounds to play
+    """
     deleteMatches()
     deletePlayers()
     registerPlayer("Don Draper")
@@ -161,10 +236,15 @@ def testCompleteSwissPairing():
     if expected_names_order != actual_names_order:
         raise ValueError(
             "After one entire tournament's swiss pairing with even players, player standings order is incorrect.")
-    print "10. After one entire tournament's swiss pairing with even players, correct player standings."
+    print "13. After one entire tournament's swiss pairing with even players, correct player standings."
 
 
 def autoSwissPairing():
+    """
+    autoSwissPairing - this function will automatically register a winner and
+                            give the swiss_pair for the next round, until there are
+                            no more rounds to play
+    """
     pairings = [1]  #default so we can have atleast one round
     swiss_round = 1
     while len(pairings) > 0:
@@ -191,75 +271,40 @@ def autoSwissPairing():
     return pairings
 
 
-def testBye():
-    deleteMatches()
+def deleteAll():
     deletePlayers()
-    # test for odd number of players
-    registerPlayer("Don Draper")
-    registerPlayer("Roger Sterling")
-    registerPlayer("Peggy Olson")
-    registerPlayer("Joan Holloway")
-    registerPlayer("Pete Campbell")
-    pairings = autoSwissPairing()
-    standings = playerStandings()
-    [name1, name2, name3, name4, name5] = [row[1] for row in standings]
-    expected_names_order = ["Don Draper", "Joan Holloway", "Peggy Olson", "Roger Sterling", "Pete Campbell"]
-    actual_names_order = [name1, name2, name3, name4, name5]
-    if expected_names_order != actual_names_order:
-        raise ValueError(
-            "After one entire tournament with odd players, player standings order is incorrect.")
-    print "11. After one entire tournament with odd players, correct player standings."
-
-
-def testTiedMatch():
     deleteMatches()
-    deletePlayers()
-    id1 = registerPlayer("Robert Plant")
-    id2 = registerPlayer("Jimmy Page")
-    id3 = registerPlayer("John Paul Jones")
-    id4 = registerPlayer("John Bonham")
-    reportMatch(id1, id2, 1)
-    reportMatch(id3, id4)
-    standings = playerStandings()
-    expected_standings = [id3, id1, id2, id4]
-    actual_standings = [standings[0][0], standings[1][0], standings[2][0], standings[3][0]]
-    if actual_standings!=expected_standings:
-        raise ValueError(
-            "Tied games should count for more than lost games, but less than won games.")
-    print "12. With one tied game, the standings are correct."
-
-
-def testOMW():
-    deleteMatches()
-    deletePlayers()
-    id1 = registerPlayer("Robert Plant")
-    id2 = registerPlayer("Jimmy Page")
-    id3 = registerPlayer("John Paul Jones")
-    id4 = registerPlayer("John Bonham")
-    reportMatch(id1, id2, 1)
-    reportMatch(id3, id4)
-    reportMatch(id1, id3)
-    reportMatch(id3, id2)
-    resolveOMW(id1, id2)
-    playerStandings()
-
+    deleteTournaments()
+    print("All database entries deleted!")
 
 if __name__ == '__main__':
-    #testDeleteMatches()
-    #testDelete()
-    #testCount()
-    #testRegister()
-    #testRegisterCountDelete()
-    #testStandingsBeforeMatches()
-    #testReportMatches()
-    #testPairings()
+    testDeleteMatches()
+    testDelete()
+    testCount()
+    testRegister()
+    testRegisterCountDelete()
+    testStandingsBeforeMatches()
+    testReportMatches()
+    testPairings()
 
     #Extra credit - assuming any number of players (odd or even)
-    #testMultipleTournaments()
-    #testCompleteSwissPairing()
-    #testBye()
-    #testTiedMatch()
-    testOMW()
+    testBye()   # We will have an odd number of players,
+                # and give one of them a bye in each round
+
+    testTiedMatch()     # We will have games where two players tie,
+                        # and produce rankings accordingly
+
+    testMultipleTournaments()   # We will create multiple tournaments,
+                                # and register players that are in both tournaments
+                                # independently as well as jointly
+
+    testOMW()   # When two players have the same number of wins, they are ranked
+                # by the OMW (Opponent Match Wins)
+
+    testCompleteSwissPairing()
+
+    deleteAll()
+
     print "Success!  All tests pass!"
 
 

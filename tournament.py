@@ -170,14 +170,41 @@ def playerStandings(tournament="Default"):
     tournament_id = getTournamentID(tournament)
     standings = []
     #query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
-    query = "SELECT player_id, player_name, wins, matches from getMatchesAndWins where tournament_id = %s"
-    values = (tournament_id,)
-    rows = executeQuery(query, values)
-    for row in rows:
-        print('{0} {1} {2} {3}'.format(row[0], row[1], row[2], row[3]))
-        standings.append(row)
+    # Check if any players are tied by points
+    query = "SELECT a.player_id, b.player_id from getMatchesAndWins as a, getMatchesAndWins as b where a.player_points = b.player_points and a.player_id < b.player_id order by a.player_points"
+    tied_players_rows = executeQuery(query)
 
-    return standings
+    print("The tied pairs are: {0}".format(tied_players_rows))
+    reordered_rows = []
+    for tied_players in tied_players_rows:
+        tied_players = resolveOMW(tied_players[0], tied_players[1])
+        reordered_rows.append(tied_players)
+        print("The tied players are ordered as: {0}".format(tied_players))
+
+    print("The tied players row is now as: {0}".format(reordered_rows))
+
+    query = "SELECT player_id, player_name, wins, matches, player_points from getMatchesAndWins where tournament_id = %s"
+    values = (tournament_id,)
+    standings_rows = executeQuery(query, values)
+    print("Before OMW:")
+    for row in standings_rows:
+        print('{0} {1} {2} {3} {4}'.format(row[0], row[1], row[2], row[3], row[4]))
+
+    for tied_pair in reordered_rows:
+        for standings in standings_rows:
+            if tied_pair[0] == standings[0]:
+                index_p1 = standings_rows.index(standings)
+            if tied_pair[1] == standings[0]:
+                index_p2 = standings_rows.index(standings)
+        if index_p1 > index_p2:
+            standings_rows[index_p1], standings_rows[index_p2] = standings_rows[index_p2], standings_rows[index_p1]
+    print("After OMW resolved: ")
+    player_standings = []
+    for row in standings_rows:
+        print('{0} {1} {2} {3} {4}'.format(row[0], row[1], row[2], row[3], row[4]))
+        player_standings.append((row[0], row[1], row[2], row[3]))
+    print("Standings' length is: {0}".format(len(player_standings)))
+    return player_standings
 
 
 def reportMatch(winner, loser, tied=0, tournament="Default"):
@@ -248,22 +275,15 @@ def swissPairings(tournament="Default"):
     if count_players<0:
         print("We don't have any players!")
     else:
-        # increase count_players if odd number to make "space" for bye
-        #if count_players%2 != 0:
-        #    count_players += 1
-        #else:
-        #    pass
-
         total_rounds = round(math.log(count_players, 2))
         total_matches = round(total_rounds * count_players/2)
         print("Total Players: {0}, Rounds: {1}, matches {2}".format(count_players, total_rounds, total_matches))
         # 2. for tournament_id, check if each player has played the same number of matches
-        query = "select getMatches.player_id, getMatches.matches from getMatches where getMatches.tournament_id = %s"
-        values = (tournament_id, )
-        match_info_rows = executeQuery(query, values)
+        standings = playerStandings(tournament)
+        # We get player_id, player_name, matches_played, wins
         # Rows contains a list of tuples (player_id, matches played)
         # We first separate the matches played of all players into a list
-        matches_played = [row[1] for row in match_info_rows]
+        matches_played = [row[3] for row in standings]
         # Then we check if all the elements (matches played of all players) is the same
         all_played_same_matches = all(x == matches_played[0] for x in matches_played)
         if all_played_same_matches:
@@ -271,33 +291,45 @@ def swissPairings(tournament="Default"):
             if matches_played[0] == total_matches:
                 print("We have played all the matches possible in this Swiss Style Tournament")
             else:
-                # get players ordered by wins
-                query = "select getWins.player_id, players.player_name, getWins.wins from getWins, players where players.player_id = getWins.player_id"
-                players_by_wins_rows = executeQuery(query)
-
                 # 4. if odd number of players, give a player a bye in that round
                 #    (making sure only one bye per player per tournament)
-                if len(players_by_wins_rows) %2 is not 0:
-                    for player_count in range(0, len(players_by_wins_rows)):
-                        query = "select * from bye_list where player_id = %s"
-                        values = (players_by_wins_rows[player_count][0], )
-                        bye_rows = executeQuery(query, values)
-                        if len(bye_rows) == 0:
-                            query = "insert into bye_list values (%s, %s)"
-                            values = (tournament_id, players_by_wins_rows[player_count][0])
-                            insert_bye_row = executeQuery(query, values)
-                            bye_player = players_by_wins_rows.pop(player_count)
-                            players_by_wins_rows.append(bye_player)
-                            players_by_wins_rows.append((None, 'bye'))
-                            break
-                print(players_by_wins_rows)
-                # 5. generate swiss pairing by sorting players by standing
-                player_pairs = getPlayerPairs(players_by_wins_rows)
+                players_by_wins_bye = giveBye(standings, tournament_id)
+                # 5. generate swiss pairing by sorting players by their standings/bye
+                player_pairs = getPlayerPairs(players_by_wins_bye)
         else:
             print("We have players who still haven't played in this round...")
             for row in rows:
                 print("Player ID: {0} has played {1} matches".format(row[0], row[1]))
     return player_pairs
+
+
+def giveBye(standings, tournament_id):
+    """ In case of making swiss pairs for an odd number of players in
+        the tournament, one player needs to be given a bye.
+        This function figures out which player hasn't been given a bye yet,
+        and gives that player a bye
+        The list of players with a bye is stored in the database.
+        Only one bye per player per tournament
+    """
+    # get players by the player_id (0th element) & their wins (2nd element)
+    players_by_wins_rows = [(row[0], row[2]) for row in standings]
+    # Only need to give a bye in case there are odd number of players
+    if len(players_by_wins_rows) %2 is not 0:
+
+        for player_count in range(0, len(players_by_wins_rows)):
+            query = "select * from bye_list where player_id = %s and tournament_id = %s"
+            values = (players_by_wins_rows[player_count][0], tournament_id, )
+            bye_rows = executeQuery(query, values)
+            if len(bye_rows) == 0:
+                query = "insert into bye_list values (%s, %s)"
+                values = (tournament_id, players_by_wins_rows[player_count][0])
+                insert_bye_row = executeQuery(query, values)
+                bye_player = players_by_wins_rows.pop(player_count)
+                players_by_wins_rows.append(bye_player)
+                players_by_wins_rows.append((None, 'bye'))
+                break
+
+    return players_by_wins_rows
 
 
 def getPlayerPairs(players):
@@ -344,8 +376,8 @@ def resolveOMW(player1, player2, tournament="Default"):
     print("returned rows: {0}".format(rows))
     players_p2_played_with+=[row[0] for row in rows]
 
-    print("List of player ids player 1 played with: {0}".format(players_p1_played_with))
-    print("List of player ids player 2 played with: {0}".format(players_p2_played_with))
+    print("List of player ids player {0} played with: {1}".format(player1, players_p1_played_with))
+    print("List of player ids player {0} played with: {1}".format(player2, players_p2_played_with))
     common_players_list = list(frozenset(players_p1_played_with).intersection(players_p2_played_with))
     print("List of common players: {0}".format(common_players_list))
     common_players_list.append(player1)
@@ -365,13 +397,15 @@ def resolveOMW(player1, player2, tournament="Default"):
     print("Player 2 and common matches winners are: {0}".format(player2_vs_common_matches))
     matches_p1_won_against_common = player1_vs_common_matches.count(player1)
     matches_p2_won_against_common = player2_vs_common_matches.count(player2)
-    print("Matches p1 won against common: {0}".format(matches_p1_won_against_common))
-    print("Matches p2 won against common: {0}".format(matches_p2_won_against_common))
+    print("Matches {0} won against common: {1}".format(player1, matches_p1_won_against_common))
+    print("Matches {0} won against common: {1}".format(player2, matches_p2_won_against_common))
 
     if matches_p1_won_against_common > matches_p2_won_against_common:
         return (player1, player2)
     elif matches_p1_won_against_common < matches_p2_won_against_common:
         return (player2, player1)
+    else:
+        return (player1, player2)
     '''elif matches_p1_won_against_common == matches_p2_won_against_common:
         query = "SELECT winner_id from match_list where player1_id = %s and player2_id = %s or player2_id = %s and player1_id = %s"
         values = (player1, player2, player1, player2,)
