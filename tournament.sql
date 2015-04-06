@@ -6,21 +6,27 @@
 -- You can write comments in this file by starting them with two dashes, like
 -- these lines here.
 
+DROP DATABASE IF EXISTS swiss_style;
+CREATE DATABASE swiss_style;
 
---  CREATE DATABASE swiss_style; Assuming the data base is already created
+\c swiss_style;
 
+
+DROP TABLE IF EXISTS tournaments;
 CREATE TABLE IF NOT EXISTS tournaments
 (
     tournament_id       serial primary key,
     tournament_name     text
 );
 
+DROP TABLE IF EXISTS players;
 CREATE TABLE IF NOT EXISTS players
 (
     player_id           serial primary key,
     player_name         text
 );
 
+DROP TABLE IF EXISTS tournament_contestants;
 CREATE TABLE IF NOT EXISTS tournament_contestants
 (
     tournament_id       serial references tournaments ON DELETE CASCADE,
@@ -29,6 +35,7 @@ CREATE TABLE IF NOT EXISTS tournament_contestants
     primary key (player_id, tournament_id)
 );
 
+DROP TABLE IF EXISTS match_list;
 CREATE TABLE IF NOT EXISTS match_list
 (
     tournament_id          integer references tournaments ON DELETE CASCADE,
@@ -40,6 +47,7 @@ CREATE TABLE IF NOT EXISTS match_list
     primary key (match_id, tournament_id)
 );
 
+DROP TABLE IF EXISTS swiss_pairs;
 CREATE TABLE IF NOT EXISTS swiss_pairs
 (
     tournament_id       integer references tournaments ON DELETE CASCADE,
@@ -50,6 +58,7 @@ CREATE TABLE IF NOT EXISTS swiss_pairs
     foreign key         (player2_id, tournament_id) references tournament_contestants ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS bye_list;
 CREATE TABLE IF NOT EXISTS bye_list
 (
     tournament_id       integer references tournaments ON DELETE CASCADE,
@@ -57,6 +66,7 @@ CREATE TABLE IF NOT EXISTS bye_list
 );
 
 
+DROP VIEW IF EXISTS getWins;
 CREATE VIEW getWins AS
     SELECT  tournament_contestants.tournament_id,
             tournament_contestants.player_id,
@@ -71,6 +81,7 @@ CREATE VIEW getWins AS
             tournament_contestants.tournament_id asc,
             tournament_contestants.player_id asc;
 
+DROP VIEW IF EXISTS getMatches;
 CREATE VIEW getMatches AS
     SELECT  tournament_contestants.tournament_id,
             tournament_contestants.player_id,
@@ -84,6 +95,7 @@ CREATE VIEW getMatches AS
             tournament_contestants.player_id
             order by matches desc;
 
+DROP VIEW IF EXISTS getMatchesAndWins;
 CREATE VIEW getMatchesAndWins AS
     SELECT  tournament_contestants.tournament_id,
             players.player_id,

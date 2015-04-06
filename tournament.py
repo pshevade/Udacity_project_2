@@ -10,7 +10,8 @@ import pprint
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=swiss_style")
+    DB = psycopg2.connect("dbname=swiss_style")
+    return DB, DB.cursor()
 
 
 def executeQuery(query, values=None):
@@ -19,8 +20,7 @@ def executeQuery(query, values=None):
         in which case the query is fully described as is
     """
     rows = ['empty']
-    DB_connection = connect()
-    cur = DB_connection.cursor()
+    DB_connection, cur = connect()
     if values is not None:
         cur.execute(query, values)
     else:
@@ -29,7 +29,6 @@ def executeQuery(query, values=None):
     try:
         rows = cur.fetchall()
     except psycopg2.ProgrammingError:
-        #print('No row to return')
         pass
     DB_connection.close()
     return rows
@@ -40,8 +39,7 @@ def registerTournament(name):
     query = "INSERT INTO tournaments (tournament_name) values (%s) RETURNING tournament_id;"
     values = (name,)
     row = executeQuery(query, values)
-    print(row)
-    return row[0][0]
+    return row[0][0]            # row will only have one element, the tournament_id
 
 
 def deleteMatches():
