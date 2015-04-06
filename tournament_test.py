@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
     testCompleteSwissPairing()
 
-    deleteAll()
+    #deleteAll()
 
     print "Success!  All tests pass!"
 

@@ -8,6 +8,7 @@
 
 
 --  CREATE DATABASE swiss_style; Assuming the data base is already created
+
 CREATE TABLE IF NOT EXISTS tournaments
 (
     tournament_id       serial primary key,
@@ -42,11 +43,9 @@ CREATE TABLE IF NOT EXISTS match_list
 CREATE TABLE IF NOT EXISTS swiss_pairs
 (
     tournament_id       integer references tournaments ON DELETE CASCADE,
-    match_id            integer,
     player1_id          integer,
     player2_id          integer,
     round               integer,
-    foreign key         (match_id, tournament_id) references match_list ON DELETE CASCADE,
     foreign key         (player1_id, tournament_id) references tournament_contestants ON DELETE CASCADE,
     foreign key         (player2_id, tournament_id) references tournament_contestants ON DELETE CASCADE
 );
