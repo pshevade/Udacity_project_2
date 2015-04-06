@@ -32,9 +32,12 @@ Additional requirements are:
 - Python 2.7.3
 - psycopg2 module for python installed
 - POSTGRESQL 9.3.6 installed
+- Bleach 1.4.1 - download: https://pypi.python.org/pypi/bleach
 
 
 CONFIGURATION:
+
+These steps will help the user configure the database and import the sql schema to make the swiss style tournament work.
 
 1. Download and install POSTGRESQL -
       http://www.postgresql.org/download/
