@@ -6,7 +6,7 @@
 import psycopg2
 import random
 import math
-import pprint
+import bleach
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
@@ -36,6 +36,8 @@ def executeQuery(query, values=None):
 
 def registerTournament(name):
     """ Register a tournament, of the name give by parameter 'name'"""
+    bleach.clean(name)
+
     query = "INSERT INTO tournaments (tournament_name) values (%s) RETURNING tournament_id;"
     values = (name,)
     row = executeQuery(query, values)
@@ -83,6 +85,9 @@ def countPlayers():
 
 def countPlayersInTournament(tournament):
     """ Count all players in a given tournament"""
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(tournament)
+
     tournament_id = getTournamentID(tournament)
     query = "SELECT count(*) from tournament_contestants where tournament_id = %s"
     values = (tournament_id, )
@@ -105,6 +110,9 @@ def registerPlayer(name, tournament="Default"):
             2. register players
             3. register player and tournament in tournament_contestants
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(name)
+    bleach.clean(tournament)
     # 1. check if tournament exists:
     tournament_id = getTournamentID(tournament)
     # 1b. if tournament does not exist, register/create it
@@ -125,6 +133,8 @@ def getTournamentID(tournament):
         tournament's name as the parameter 'tournament'
         If no tournament exists of the name, returns a -1 to recognize this
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(tournament)
     query = "select tournament_id from tournaments where tournament_name = %s"
     values = (tournament, )
     rows = executeQuery(query, values)
@@ -150,6 +160,9 @@ def playerStandings(tournament="Default"):
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(tournament)
+
     tournament_id = getTournamentID(tournament)
     standings = []
 
@@ -194,6 +207,7 @@ def printStandings(standings):
 
 
 def reportMatch(winner, loser, tied=0, tournament="Default"):
+
     """Records the outcome of a single match between two players.
 
     Args:
@@ -202,6 +216,12 @@ def reportMatch(winner, loser, tied=0, tournament="Default"):
       tied:     in case the match is a tie, then winner, loser are just tied players
       tournament: defaults to "Default", this will allow to report matches per tournament name
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(tournament)
+    bleach.clean(winner)
+    bleach.clean(loser)
+    bleach.clean(tied)
+
     tournament_id = getTournamentID(tournament)
     if tied == 0:
         values_report_match = (tournament_id, winner, loser, winner, tied)
@@ -221,6 +241,9 @@ def reportMatch(winner, loser, tied=0, tournament="Default"):
 
 def getPlayerId(name):
     """ Returns player_id based on the player's name given by parameter 'name' """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(name)
+
     query = "select player_id from players where player_name = %s;"
     values = (name, )
     rows = executeQuery(query, values)
@@ -233,6 +256,10 @@ def registerContestants(player, tournament):
     """ Registers the contestants per tournament
         Done for the case when multiple tournaments exist
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(player)
+    bleach.clean(tournament)
+
     query = "INSERT INTO tournament_contestants values (%s, %s);"
     values = (tournament, player, )
     executeQuery(query, values)
@@ -254,6 +281,9 @@ def swissPairings(tournament="Default"):
                 (making sure only one bye per player per tournament)
             5. generate swiss pairing by sorting players by wins
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(tournament)
+
     # 1. get tournament_id and calculate total rounds and total matches possible
     player_pairs = []
     count_players = countPlayersInTournament(tournament)
@@ -303,6 +333,7 @@ def giveBye(standings, tournament_id):
         The list of players with a bye is stored in the database.
         Only one bye per player per tournament
     """
+
     # get players by the player_id (0th element) & their wins (2nd element)
     players_by_wins_rows = [(row[0], row[1]) for row in standings]
     # Only need to give a bye in case there are odd number of players
@@ -358,6 +389,9 @@ def resolveOMW(player1, player2, tournament="Default"):
         7. if player 2 has won more games than player 1, swap their order
 
     """
+    # Sanitize input, in case it comes from web app/environment
+    bleach.clean(tournament)
+
     # 1. get all players player1 has played with
     tournament_id = getTournamentID(tournament)
     query = "SELECT player2_id from match_list where player1_id = %s and tournament_id = %s"
