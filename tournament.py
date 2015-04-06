@@ -29,7 +29,8 @@ def executeQuery(query, values=None):
     try:
         rows = cur.fetchall()
     except psycopg2.ProgrammingError:
-        print('No row to return')
+        #print('No row to return')
+        pass
     DB_connection.close()
     return rows
 
@@ -185,8 +186,13 @@ def playerStandings(tournament="Default"):
     player_standings = []
     for row in standings_rows:
         player_standings.append((row[0], row[1], row[2], row[3]))
-
     return player_standings
+
+
+def printStandings(standings):
+    print("Player ID".ljust(10)+"Player Name".ljust(20)+"Wins".ljust(10)+"Matches".ljust(10))
+    for row in standings:
+        print(str(row[0]).ljust(10)+str(row[1]).ljust(20)+str(row[2]).ljust(10)+str(row[3]).ljust(10))
 
 
 def reportMatch(winner, loser, tied=0, tournament="Default"):
@@ -255,13 +261,11 @@ def swissPairings(tournament="Default"):
     count_players = countPlayersInTournament(tournament)
     tournament_id = getTournamentID(tournament)
     # check if count_players is odd, need to allocate a "space" for bye in that case
-    print("We just measured players to be: {0}".format(count_players))
     if count_players<0:
         print("We don't have any players!")
     else:
         total_rounds = round(math.log(count_players, 2))
         total_matches = round(total_rounds * count_players/2)
-        print("Total Players: {0}, Rounds: {1}, matches {2}".format(count_players, total_rounds, total_matches))
         # 2. for tournament_id, check if each player has played the same number of matches
         standings = playerStandings(tournament)
         # We get player_id, player_name, matches_played, wins
@@ -286,10 +290,10 @@ def swissPairings(tournament="Default"):
                     values = (tournament_id, pair[0], pair[2], 2**round(matches_played[0]/(count_players/2)),)
                     executeQuery(query, values)
         else:
-            print("We have players who still haven't played in this round...")
+            print("We have players who still haven't played in this round, as follows: ")
             for row in rows:
                 print("Player ID: {0} has played {1} matches".format(row[0], row[1]))
-    print("Swiss pairs returns the pairs: {0}".format(player_pairs))
+
     return player_pairs
 
 
